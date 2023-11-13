@@ -468,6 +468,114 @@ BBBMatrix::~BBBMatrix() {
         delete m_panelMatrix;
 }
 
+bool BBBMatrix::InitSequenceFM6126( Json::Value& root )
+{
+    int columns = m_height > m_width ? m_height : m_width;
+	std::vector<std::string> ctrlPinNames = { "oe", "latch", "clock", "sel0", "sel1", "sel2", "sel3" };
+	std::vector<std::string> panelPinNames = { "r1", "g1", "b1", "r2", "g2", "b2" };
+	
+	std::vector<const PinCapabilities*> ctrlPins;
+	std::vector<const PinCapabilities*> panelPins;
+	
+	// init all pins
+    for( auto& ctype : ctrlPinNames )
+	{
+		std::string pinName = root["controls"][ctype]["pin"].asString();
+		const PinCapabilities* pin = PinCapabilities::getPinByName( pinName ).ptr();
+		
+		pin->configPin( "gpio" );
+		ctrlPins.push_back( pin );
+    }
+	const PinCapabilities* pin_oe		= ctrlPins[0];
+	const PinCapabilities* pin_latch	= ctrlPins[1];
+	const PinCapabilities* pin_clock	= ctrlPins[2];
+	const PinCapabilities* pin_sel0		= ctrlPins[3];
+	const PinCapabilities* pin_sel1		= ctrlPins[4];
+	const PinCapabilities* pin_sel2		= ctrlPins[5];
+	const PinCapabilities* pin_sel3		= ctrlPins[6];
+    for( auto& ctype : panelPinNames )
+	{
+		std::string pinName = root["outputs"][0]["pins"][ctype].asString();
+		const PinCapabilities* pin = PinCapabilities::getPinByName( pinName ).ptr();
+		
+		pin->configPin( "gpio" );
+		pin->setValue( false );
+		panelPins.push_back( pin );
+	}
+	
+	// first set all pins to default value:
+	pin_oe->setValue( false );
+	pin_latch->setValue( false );
+	pin_clock->setValue( false );
+	pin_sel0->setValue( true );
+	pin_sel1->setValue( true );
+	pin_sel2->setValue( true );
+	pin_sel3->setValue( true );
+	
+	// wait a little
+	std::this_thread::sleep_for( std::chrono::microseconds( 800 ) );
+	
+	pin_oe->setValue( true );
+	std::this_thread::sleep_for( std::chrono::microseconds( 80 ) );
+	
+	static const char* init_b12 = "0111111111111111";  // full bright
+	static const char* init_b13 = "0000000001000000";  // panel on.
+	
+	for( int i = 0; i < columns; ++i )
+	{
+		bool value = init_b12[i % 16] == '0' ? false : true;
+		if (i > columns - 12)
+		{
+			pin_latch->setValue( true );
+		}
+		else
+		{
+			pin_latch->setValue( false );
+		}
+		for( auto& pin : panelPins )
+		{
+			pin->setValue( value );
+		}
+		pin_clock->setValue( true );
+		pin_clock->setValue( false );
+	}
+	pin_latch->setValue( false );
+	
+	for( int i = 0; i < columns; ++i )
+	{
+		bool value = init_b13[i % 16] == '0' ? false : true;
+		if (i > columns - 13)
+		{
+			pin_latch->setValue( true );
+		}
+		else
+		{
+			pin_latch->setValue( false );
+		}
+		for( auto& pin : panelPins )
+		{
+			pin->setValue( value );
+		}
+		pin_clock->setValue( true );
+		pin_clock->setValue( false );
+	}
+	pin_latch->setValue( false );
+	
+	std::this_thread::sleep_for( std::chrono::microseconds( 800 ) );
+	
+	// de-init all pins
+	for( auto& pin : ctrlPins )
+	{
+        pin->configPin( "default", false );
+	}	
+	for( auto& pin : panelPins )
+	{
+        pin->configPin( "default", false );
+	}
+	
+	return true;
+}
+
 bool BBBMatrix::configureControlPin(const std::string& ctype, Json::Value& root, std::ofstream& outputFile) {
     std::string type = root["controls"][ctype]["type"].asString();
     if (type != "none") {
@@ -745,6 +853,9 @@ int BBBMatrix::Init(Json::Value config) {
             m_dataOffset = root["dataOffset"].asInt();
             m_dataOffset *= 1024; // dataOffset is in KB
         }
+
+		// Un-comment for panels FM6126 or FM6126A driver
+		// InitSequenceFM6126( root );
 
         configureControlPin("latch", root, outputFile);
         outputFile << "\n";

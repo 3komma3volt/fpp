@@ -64,6 +64,7 @@ public:
 private:
     void calcBrightnessFlags(std::vector<std::string>& sargs);
     void printStats();
+    bool InitSequenceFM6126( Json::Value& root );
     bool configureControlPin(const std::string& ctype, Json::Value& root, std::ofstream& outputFile);
     void configurePanelPins(int x, Json::Value& root, std::ofstream& outputFile, int* minPort);
     void configurePanelPin(int x, const std::string& color, int row, Json::Value& root, std::ofstream& outputFile, int* minPort);
