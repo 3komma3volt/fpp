@@ -798,6 +798,9 @@ if ((isset($settings['MultiSyncAdvancedView'])) &&
             var hostname = data[i].hostname;
             if (hostname == "") {
                 hostname = ip;
+            } else {
+                var cleanHost = hostname.replace(/[^a-zA-Z0-9]/, '_');
+                rowID = rowID + '_' + cleanHost;
             }
             var hostKey = hostname + '_' + data[i].version + '_' + data[i].fppModeString + '_' + data[i].channelRanges;
             hostKey = hostKey.replace(/[^a-zA-Z0-9]/, '_');
@@ -853,13 +856,18 @@ if ((isset($settings['MultiSyncAdvancedView'])) &&
 
                 rowSpans[rowID] = 1;
 
-		        var ipTxt = data[i].local ? data[i].address : ipLink(data[i].address);
+		var ipTxt = data[i].local ? data[i].address : ipLink(data[i].address);
 
                 if ((data[i].fppModeString == 'remote') && (star != ""))
                     ipTxt = "<small class='hostDescriptionSM'>Select IPs for Unicast Sync</small><br>" + ipTxt + star;
 
+		var hostTxt = "<a href='http://" + hostname + ".local'>" + hostname + "</a>";
+                if(data[i].address == hostname){
+                    hostTxt = hostname;
+                }
+
                 var newRow = "<tr id='" + rowID + "' ip='" + data[i].address + "' ipList='" + data[i].address + "' class='systemRow'>" +
-                    "<td class='hostnameColumn'><span id='fpp_" + ip.replace(/\./g,'_') + "_hostname'" +  hnSpanStyle +">" + hostname + "</span><br><small class='hostDescriptionSM' id='fpp_" + ip.replace(/\./g,'_') + "_desc'>"+ hostDescription +"</small></td>" +
+                    "<td class='hostnameColumn'><span id='fpp_" + ip.replace(/\./g,'_') + "_hostname'" +  hnSpanStyle +">" + hostTxt + "</span><br><small class='hostDescriptionSM' id='fpp_" + ip.replace(/\./g,'_') + "_desc'>"+ hostDescription +"</small></td>" +
                     "<td id='" + rowID + "_ip' ip='" + data[i].address + "'>" + ipTxt + "</td>" +
                     "<td><span id='" + rowID + "_platform'>" + data[i].type + "</span><br><small id='" + rowID + "_variant'>" + data[i].model + "</small><span class='hidden typeId'>" + data[i].typeId + "</span>"
                         + "<span class='hidden version'>" + data[i].version + "</span></td>" +
